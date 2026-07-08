@@ -56,6 +56,8 @@ class DasymetricRefinementProcessor(BaseProcessor):
         in_inputFile6_weightTable_rds = data.get('inputFile6_weightTable_rds')
         in_inputFile7_buildings_rds = data.get('inputFile7_buildings_rds')
         in_inputFile8_buildingCountThreshold = data.get('inputFile8_buildingCountThreshold')
+        in_inputFile9_lauInCatchmentFallback_rds = data.get('inputFile9_lauInCatchmentFallback_rds')
+        in_inputFile10_popFocusYearFallback_rds = data.get('inputFile10_popFocusYearFallback_rds')
 
         # Check user inputs
         if in_refinement_type is None:
@@ -82,6 +84,8 @@ class DasymetricRefinementProcessor(BaseProcessor):
         # If inputFile7_buildings_rds is omitted, the building-count step is skipped
         # entirely and inputFile8_buildingCountThreshold defaults to 1 (though it's
         # only relevant when inputFile7_buildings_rds is provided).
+        # inputFile9/10 (also optional) are only used if inputFile3_lauInCatchment_rds
+        # has zero LAU units for inputFile4_popFocusYear_rds.
 
         # Where to store output data
         refinement_rds_filename = 'refinement-%s.rds' % self.my_job_id
@@ -104,6 +108,7 @@ class DasymetricRefinementProcessor(BaseProcessor):
         # <refinement_type> <corineCLC_rds_path> <corine_year_rds_path> <lau_in_catchment_rds_path>
         # <pop_focus_year_rds_path> <catchment_gpkg_path> <weight_table_rds_path>
         # <buildings_rds_path|NA> <buildingCountThreshold|NA>
+        # <lau_in_catchment_fallback_rds_path|NA> <pop_focus_year_fallback_rds_path|NA>
         # <output_refinement_rds_path> <output_refinement_tif_path> <output_cell_statistics_rds_path>
         # <output_corine_final_rds_path>
         script_args = [
@@ -116,6 +121,8 @@ class DasymetricRefinementProcessor(BaseProcessor):
             in_inputFile6_weightTable_rds,
             in_inputFile7_buildings_rds if in_inputFile7_buildings_rds is not None else 'NA',
             in_inputFile8_buildingCountThreshold if in_inputFile8_buildingCountThreshold is not None else 'NA',
+            in_inputFile9_lauInCatchmentFallback_rds if in_inputFile9_lauInCatchmentFallback_rds is not None else 'NA',
+            in_inputFile10_popFocusYearFallback_rds if in_inputFile10_popFocusYearFallback_rds is not None else 'NA',
             refinement_rds_filepath,
             refinement_tif_filepath,
             cell_statistics_filepath,

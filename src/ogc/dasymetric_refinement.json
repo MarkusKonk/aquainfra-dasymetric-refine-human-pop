@@ -117,6 +117,28 @@
       "minOccurs": 0,
       "maxOccurs": 1,
       "keywords": []
+    },
+    "inputFile9_lauInCatchmentFallback_rds": {
+      "title": "LAU polygons in catchment, fallback year (optional)",
+      "description": "Path to an .rds file containing LAU polygons within the catchment for a fallback year, in the same format as inputFile3_lauInCatchment_rds. Used only if inputFile3_lauInCatchment_rds has zero LAU units for inputFile4_popFocusYear_rds (e.g. GISCO's LAU boundaries for 2021 don't include the UK); requires inputFile10_popFocusYearFallback_rds to also be supplied.",
+      "schema": {
+        "type": "object",
+        "contentMediaType": "application/x-rds"
+      },
+      "minOccurs": 0,
+      "maxOccurs": 1,
+      "keywords": []
+    },
+    "inputFile10_popFocusYearFallback_rds": {
+      "title": "Population focus year, fallback (optional)",
+      "description": "Path to an .rds file containing the focus year corresponding to inputFile9_lauInCatchmentFallback_rds (e.g. 2018), used to select that file's LAU population column. Only used if inputFile3_lauInCatchment_rds has zero LAU units for inputFile4_popFocusYear_rds.",
+      "schema": {
+        "type": "object",
+        "contentMediaType": "application/x-rds"
+      },
+      "minOccurs": 0,
+      "maxOccurs": 1,
+      "keywords": []
     }
   },
   "outputs": {
