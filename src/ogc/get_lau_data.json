@@ -6,7 +6,7 @@
     "en": "Get LAU population data"
   },
   "description": {
-    "en": "Fetches Eurostat LAU (Local Administrative Unit) human population data for the given countries and focus year via GISCO, reprojected to EPSG:3035 (R function 'get_lau_population'). This process is used for both the population focus year and the reference year by supplying a different year value"
+    "en": "Fetches Eurostat LAU (Local Administrative Unit) human population data for the given countries and focus year via GISCO, reprojected to EPSG:3035 (R function 'get_lau_population'). This process is used for both the population focus year and the reference year by supplying a different year value. GISCO's LAU boundaries don't cover every country for every year (e.g. the UK is missing from the 2021 vintage); if a requested country has no LAU data for focus_year, the nearest year (by proximity) that does have data for that country is used instead, and that country's population columns are relabeled to focus_year so the output always has a consistent 'POP_<focus_year>' column. A message is printed whenever this substitution happens."
   },
   "jobControlOptions": ["sync-execute", "async-execute"],
   "keywords": ["human population use case", "AquaINFRA", "Eurostat", "GISCO", "LAU", "population"],
