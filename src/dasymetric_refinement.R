@@ -204,8 +204,8 @@ dasymetric_refinement_raster <- function(cor_rast_geom,
 
 args <- commandArgs(trailingOnly = TRUE)
 
-if (length(args) != 15) {
-  stop("Usage: Rscript src/dasymetric_refinement.R <refinement_type> <corineCLC_rds_path> <corine_year_rds_path> <lau_in_catchment_rds_path> <pop_focus_year_rds_path> <catchment_gpkg_path> <weight_table_rds_path> <buildings_rds_path|NA> <building_count_threshold|NA> <lau_in_catchment_fallback_rds_path|NA> <pop_focus_year_fallback_rds_path|NA> <output_refinement_rds_path> <output_refinement_tif_path> <output_cell_statistics_rds_path> <output_corine_final_rds_path>", call. = FALSE)
+if (length(args) != 13) {
+  stop("Usage: Rscript src/dasymetric_refinement.R <refinement_type> <corineCLC_rds_path> <corine_year_rds_path> <lau_in_catchment_rds_path> <pop_focus_year_rds_path> <catchment_gpkg_path> <weight_table_rds_path> <buildings_rds_path|NA> <building_count_threshold|NA> <output_refinement_rds_path> <output_refinement_tif_path> <output_cell_statistics_rds_path> <output_corine_final_rds_path>", call. = FALSE)
 }
 
 refinement_type <- args[1]
@@ -244,12 +244,10 @@ catchment_gpkg_path <- args[6]
 weight_table_rds_path <- args[7]
 buildings_rds_path <- args[8]
 building_count_threshold_arg <- args[9]
-lau_in_catchment_fallback_rds_path <- args[10]
-pop_focus_year_fallback_rds_path <- args[11]
-output_refinement_rds_path <- args[12]
-output_refinement_tif_path <- args[13]
-output_cell_statistics_rds_path <- args[14]
-output_corine_final_rds_path <- args[15]
+output_refinement_rds_path <- args[10]
+output_refinement_tif_path <- args[11]
+output_cell_statistics_rds_path <- args[12]
+output_corine_final_rds_path <- args[13]
 
 message("D2K Wrapper Started for dasymetric refinement.")
 
@@ -274,40 +272,10 @@ tryCatch({
   }
   
   lau_in_catchment <- readRDS(lau_in_catchment_rds_path)
-
-  # If this catchment has no LAU units at all for pop_focus_year (e.g. GISCO's
-  # LAU boundaries for 2021 don't include the UK), fall back to a pre-fetched
-  # LAU-in-catchment file for a different year, when supplied.
-  if (nrow(lau_in_catchment) == 0 &&
-      !identical(lau_in_catchment_fallback_rds_path, "NA") &&
-      !identical(pop_focus_year_fallback_rds_path, "NA")) {
-
-    lau_in_catchment_fallback <- readRDS(lau_in_catchment_fallback_rds_path)
-    pop_focus_year_fallback <- as.character(readRDS(pop_focus_year_fallback_rds_path))
-
-    if (nrow(lau_in_catchment_fallback) > 0) {
-      message(sprintf(
-        "Note: no LAU units found for pop_focus_year %s in this catchment; falling back to pop_focus_year %s.",
-        pop_focus_year, pop_focus_year_fallback
-      ))
-      lau_in_catchment <- lau_in_catchment_fallback
-      pop_focus_year <- pop_focus_year_fallback
-    }
-  }
-
-  if (nrow(lau_in_catchment) == 0) {
-    stop(
-      sprintf(
-        "No LAU units found for this catchment for pop_focus_year %s; cannot perform dasymetric refinement. This may mean GISCO's LAU boundaries don't cover this catchment's country for the requested year (e.g. the UK is missing from GISCO's 2021 LAU vintage).",
-        pop_focus_year
-      ),
-      call. = FALSE
-    )
-  }
-
-  lau_value_col_focus <- paste0("POP_",
+  
+  lau_value_col_focus <- paste0("POP_", 
                                 pop_focus_year) #"values"
-
+  
   # Read spatial focus object
   catchment_gpkg <- sf::st_read(catchment_gpkg_path,
                                 quiet = TRUE)
