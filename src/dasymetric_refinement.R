@@ -34,9 +34,13 @@ dasymetric_refinement_raster <- function(cor_rast_geom,
   # Ensure the spatial extent is a SpatVector
   lau_vect <- terra::vect(lau_in_catchment)
   
-  # make numeric LAU ID column
+  # make numeric LAU ID column — LAU_ID isn't always numeric (e.g. UK's
+  # alphanumeric ONS codes like "E07000064"), so as.integer() directly would
+  # silently produce NA for every feature. Derive a safe sequential integer
+  # per unique LAU_ID instead; only used internally as a join key, so its
+  # actual value doesn't matter as long as it's unique per LAU unit.
   lau_ids <- terra::values(lau_vect)[[source_id]]
-  lau_vect$LAU_ID_num <- as.integer(lau_ids)
+  lau_vect$LAU_ID_num <- as.integer(factor(lau_ids))
   
   # rasterize LAU IDs
   lau_raster <- terra::rasterize(
