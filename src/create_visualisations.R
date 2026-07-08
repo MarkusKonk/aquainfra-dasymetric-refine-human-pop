@@ -837,11 +837,11 @@ save_map_pop_errors_at_censusgrid <- function(
   )
   
   # SPECIAL CLASS
-  special_sf$group <- "No estimation (pop > 0)"
-  
+  special_sf$group <- "False negatives (pop > 0)"
+
   pal_special <- leaflet::colorFactor(
     palette = "yellow",
-    levels = "No estimation (pop > 0)"
+    levels = "False negatives (pop > 0)"
   )
   
   # PROJECT
@@ -865,7 +865,7 @@ save_map_pop_errors_at_censusgrid <- function(
 
   special_ll$label_html <- lapply(
     paste0(
-      "<strong>No estimation (pop > 0)</strong><br>",
+      "<strong>False negatives (pop > 0)</strong><br>",
       "<strong>Observed:</strong> ", special_ll[[census_grid_value_col]]
     ),
     htmltools::HTML
@@ -924,7 +924,7 @@ save_map_pop_errors_at_censusgrid <- function(
     leaflet::addLegend(
       colors = c("yellow", numeric_colors),
       labels = c(
-        "No estimation (pop > 0)",
+        "False negatives (pop > 0)",
         numeric_labels
       ),
       title = paste0("Population difference (", pop_reference_year, ")"),
