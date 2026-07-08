@@ -17,6 +17,24 @@ library(sf)
 # --- 2. GLOBAL SETTINGS ---
 options(scipen = 100, digits = 4)
 
+# Prefer preferred_col; fall back to fallback_col if preferred_col has no
+# usable (positive) values for this catchment — e.g. Eurostat's 2021 census
+# grid doesn't cover the UK, but 2018 does.
+resolve_census_grid_value_col <- function(census_grid, preferred_col = "TOT_P_2021", fallback_col = "TOT_P_2018") {
+  col_has_usable_data <- function(col) {
+    col %in% names(census_grid) &&
+      any(!is.na(census_grid[[col]]) & census_grid[[col]] > 0)
+  }
+  if (!col_has_usable_data(preferred_col) && col_has_usable_data(fallback_col)) {
+    message(sprintf(
+      "Note: '%s' has no usable population data for this catchment; falling back to '%s'.",
+      preferred_col, fallback_col
+    ))
+    return(fallback_col)
+  }
+  preferred_col
+}
+
 # --- 3. FUNCTION DEFINITION (Original Code) ---
 add_evaluations_to_censusgrid <- function(refinement_reference_cropped,
                                           refinement_reference_simple,
@@ -71,18 +89,18 @@ add_evaluations_to_censusgrid <- function(refinement_reference_cropped,
   # Replace NA or NaN in the observed population column
   census_grid_eval2[[census_grid_value_col]][is.na(census_grid_eval2[[census_grid_value_col]])] <- 0
   
-  # Calculate absolute difference of estimated population minus observed population  
-  census_grid_eval1$dif1 <- census_grid_eval1$pop_est_cell1 - census_grid_eval1$TOT_P_2021
-  # Calculate absolute difference of estimated population minus observed population  
-  census_grid_eval2$dif2 <- census_grid_eval2$pop_est_cell2 - census_grid_eval2$TOT_P_2021
-  
-  # Calculate percentage difference of estimated population minus observed population  
-  census_grid_eval1$dif_perc1 <- abs((census_grid_eval1$dif1 / census_grid_eval1$TOT_P_2021) * 100)
+  # Calculate absolute difference of estimated population minus observed population
+  census_grid_eval1$dif1 <- census_grid_eval1$pop_est_cell1 - census_grid_eval1[[census_grid_value_col]]
+  # Calculate absolute difference of estimated population minus observed population
+  census_grid_eval2$dif2 <- census_grid_eval2$pop_est_cell2 - census_grid_eval2[[census_grid_value_col]]
+
+  # Calculate percentage difference of estimated population minus observed population
+  census_grid_eval1$dif_perc1 <- abs((census_grid_eval1$dif1 / census_grid_eval1[[census_grid_value_col]]) * 100)
   # Replace NA or NaN in the dif_perc column
   census_grid_eval1$dif_perc1[is.na(census_grid_eval1$dif_perc1)] <- 0
   census_grid_eval1$dif_perc1[is.infinite(census_grid_eval1$dif_perc1)] <- 999
-  # Calculate percentage difference of estimated population minus observed population  
-  census_grid_eval2$dif_perc2 <- abs((census_grid_eval2$dif2 / census_grid_eval2$TOT_P_2021) * 100)
+  # Calculate percentage difference of estimated population minus observed population
+  census_grid_eval2$dif_perc2 <- abs((census_grid_eval2$dif2 / census_grid_eval2[[census_grid_value_col]]) * 100)
   # Replace NA or NaN in the dif_perc column
   census_grid_eval2$dif_perc2[is.na(census_grid_eval2$dif_perc2)] <- 0
   census_grid_eval2$dif_perc2[is.infinite(census_grid_eval2$dif_perc2)] <- 999
@@ -227,11 +245,14 @@ tryCatch({
   # Read spatial focus object
   census_grid <- readRDS(census_grid_rds_path)
 
+  census_grid_value_col_resolved <- resolve_census_grid_value_col(census_grid)
+  pop_reference_year_resolved <- sub("^TOT_P_", "", census_grid_value_col_resolved)
+
   census_grid_evals <- add_evaluations_to_censusgrid(refinement_reference_cropped = refinement_weighted,
                                                      refinement_reference_simple = refinement_simple,
                                                      census_grid_geom_cropped = census_grid,
-                                                     census_grid_value_col = "TOT_P_2021",
-                                                     pop_reference_year = "2021")
+                                                     census_grid_value_col = census_grid_value_col_resolved,
+                                                     pop_reference_year = pop_reference_year_resolved)
   census_grid_eval_weighted <- census_grid_evals$result1
   census_grid_eval_simple <- census_grid_evals$result2
   metrics_weighted <- census_grid_evals$result3
@@ -257,8 +278,8 @@ tryCatch({
   corineCLC <- readRDS(corineCLC_rds_path)
   
   corineCLC_overlapping_positive_pop <- get_only_corineCLC_overlapping_positive_pop(census_grid_geom = census_grid,
-                                                                                     cor_rast_geom = corineCLC, 
-                                                                                     census_grid_value_col = "TOT_P_2021")
+                                                                                     cor_rast_geom = corineCLC,
+                                                                                     census_grid_value_col = census_grid_value_col_resolved)
   
   # Save as .rds for machine/subsequent steps
   saveRDS(corineCLC_overlapping_positive_pop, 
