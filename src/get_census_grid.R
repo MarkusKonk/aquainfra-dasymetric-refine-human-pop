@@ -13,6 +13,10 @@ library(sf)
 # --- 2. GLOBAL SETTINGS ---
 options(scipen = 100, digits = 4)
 
+# grid_1km.parquet is ~175 MB; R's default 60s download timeout can be too
+# short on slower connections, aborting the download partway through.
+options(timeout = max(1800, getOption("timeout")))
+
 # --- 3. FUNCTION DEFINITION (Original Code) ---
 get_census_grid <- function(countries_for_catchment) {
   
