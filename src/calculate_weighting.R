@@ -273,7 +273,7 @@ calculate_weighting <- function(census_grid_geom,
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) != 7) {
-  stop("Usage: Rscript src/calculate_weighting.R <censusgrid_selected_rds_path> <corineCLC_cropped_rds_path> <corine_year_rds_path> <clc_legend_rds_path> <cor_urban_values_rds_path|NA> <additional_candidate_classes_to_consider_rds_path|NA> <weight_table_rds_path>", call. = FALSE)
+  stop("Usage: Rscript src/calculate_weighting.R <censusgrid_selected_rds_path> <corineCLC_cropped_rds_path> <corine_year_rds_path> <clc_legend_rds_path> <cor_urban_values_rds_path|NA> <additional_candidate_classes_to_consider: all_artificial_surface_classes|all_other_classes|NA> <weight_table_rds_path>", call. = FALSE)
 }
 
 censusgrid_selected_rds_path <- args[1]
@@ -295,7 +295,7 @@ if (!(corine_year == "2018")) {
 
 clc_legend_rds_path <- args[4]
 cor_urban_values_rds_path <- args[5]
-additional_candidate_classes_to_consider_rds_path <- args[6]
+additional_candidate_classes_to_consider_arg <- args[6]
 weight_table_rds_path <- args[7]
 
 message("D2K Wrapper Started for corine CLC retrieval.")
@@ -318,10 +318,10 @@ tryCatch({
     readRDS(cor_urban_values_rds_path)
   }
 
-  additional_candidate_classes_to_consider <- if (identical(additional_candidate_classes_to_consider_rds_path, "NA")) {
+  additional_candidate_classes_to_consider <- if (identical(additional_candidate_classes_to_consider_arg, "NA")) {
     NA
   } else {
-    readRDS(additional_candidate_classes_to_consider_rds_path)
+    additional_candidate_classes_to_consider_arg
   }
 
   # calculate weighting

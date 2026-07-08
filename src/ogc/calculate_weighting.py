@@ -53,7 +53,7 @@ class CalculateWeightingProcessor(BaseProcessor):
         in_inputFile4_clcLegend_rds = data.get('inputFile5_clcLegend_rds')
         # Optional inputs
         in_inputFile5_corUrbanValues_rds = data.get('inputFile5_corUrbanValues_rds')
-        in_inputFile6_additionalCandidateClassesToConsider_rds = data.get('inputFile6_additionalCandidateClassesToConsider_rds')
+        in_additionalCandidateClassesToConsider = data.get('additional_candidate_classes_to_consider')
 
         # Check user inputs
         if in_inputFile1_censusgridSelected_rds is None:
@@ -72,7 +72,7 @@ class CalculateWeightingProcessor(BaseProcessor):
 
         # Assemble args for script (order must match the R script's commandArgs):
         # <censusgrid_selected_rds_path> <corineCLC_cropped_rds_path> <corine_year_rds_path>
-        # <clc_legend_rds_path> <cor_urban_values_rds_path|NA> <additional_candidate_classes_to_consider_rds_path|NA>
+        # <clc_legend_rds_path> <cor_urban_values_rds_path|NA> <additional_candidate_classes_to_consider|NA>
         # <weight_table_rds_path>
         script_args = [
             in_inputFile1_censusgridSelected_rds,
@@ -80,7 +80,7 @@ class CalculateWeightingProcessor(BaseProcessor):
             in_inputFile3_corineYear_rds,
             in_inputFile4_clcLegend_rds,
             in_inputFile5_corUrbanValues_rds if in_inputFile5_corUrbanValues_rds is not None else 'NA',
-            in_inputFile6_additionalCandidateClassesToConsider_rds if in_inputFile6_additionalCandidateClassesToConsider_rds is not None else 'NA',
+            in_additionalCandidateClassesToConsider if in_additionalCandidateClassesToConsider is not None else 'NA',
             weight_table_filepath
         ]
 
