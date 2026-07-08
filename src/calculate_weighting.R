@@ -21,11 +21,31 @@ calculate_weighting <- function(census_grid_geom,
                                 cor_code_raster_columnname,
                                 clc_legend = clc_legend,
                                 census_grid_value_col = "TOT_P_2021",
+                                census_grid_value_col_fallback = "TOT_P_2018",
                                 cor_urban_values = NULL,
                                 additional_candidate_classes_to_consider = NA) {
-  
+
   # get census_grid as terra vector
   census_vect <- terra::vect(census_grid_geom)
+  n_census_cells_total <- length(census_vect)
+
+  # A column "exists" (for our purposes) only if it's present AND has at
+  # least one usable (positive) value — e.g. Eurostat's 2021 population grid
+  # column is present but all-zero for the UK, which isn't usable either.
+  col_has_usable_data <- function(col) {
+    !is.null(col) &&
+      col %in% names(census_vect) &&
+      any(!is.na(census_vect[[col]]) & census_vect[[col]] > 0)
+  }
+
+  if (!col_has_usable_data(census_grid_value_col) &&
+      col_has_usable_data(census_grid_value_col_fallback)) {
+    message(sprintf(
+      "Note: '%s' has no usable population data for this catchment; falling back to '%s'.",
+      census_grid_value_col, census_grid_value_col_fallback
+    ))
+    census_grid_value_col <- census_grid_value_col_fallback
+  }
 
   # Only keep cells with positive population — avoids diluting the density
   # calculation with zero/NA-population cells further down (zonal mean, etc.)
@@ -33,6 +53,23 @@ calculate_weighting <- function(census_grid_geom,
     !is.na(census_vect[[census_grid_value_col]]) &
       census_vect[[census_grid_value_col]] > 0,
   ]
+  n_census_cells_valid <- length(census_vect)
+
+  if (n_census_cells_valid == 0) {
+    stop(
+      sprintf(
+        "No census grid cells with positive population found for this catchment (checked '%s'%s); cannot calculate weights. This may mean the catchment falls outside the census grid's coverage (e.g. the UK is not covered by Eurostat's 2021 census grid).",
+        census_grid_value_col,
+        if (!is.null(census_grid_value_col_fallback)) sprintf(" and fallback '%s'", census_grid_value_col_fallback) else ""
+      ),
+      call. = FALSE
+    )
+  } else if (n_census_cells_valid < n_census_cells_total) {
+    message(sprintf(
+      "Note: %d of %d census grid cells in this catchment have no usable population data in '%s' (NA or <= 0) and are excluded from the weighting calculation. Proceeding with the remaining %d cell(s).",
+      n_census_cells_total - n_census_cells_valid, n_census_cells_total, census_grid_value_col, n_census_cells_valid
+    ))
+  }
 
   # FIRST: TREAT CATEGORY 111 CONTINUOUS URBAN
   # keep only urban corine classes in country specific corine raster
@@ -42,43 +79,55 @@ calculate_weighting <- function(census_grid_geom,
     others = NA
   )
   
+  avg_111 <- NULL
+
   if (terra::global(!is.na(cor_111), "sum", na.rm = TRUE)[1,1] > 0) {
-    
-    # Create raster with census grid population masked to 
-    # only be with values for artificial surface CORINE categories
-    # (use max value if overlapping polygons within cell):
-    census_raster_111_draft <- terra::rasterize(census_vect, 
-                                                cor_111, 
-                                                field = census_grid_value_col, 
-                                                fun = "max") |> terra::mask(cor_111) # max value if overlaps
-    
-    # count number of cor_111 cells per polygon (feature)
-    counts_111 <- terra::extract(
-      cor_111,
-      census_vect,
-      fun = function(x, ...) sum(!is.na(x)),
-      df = TRUE
-    )
-    census_vect$cell_111_count <- counts_111[,2]
-    
-    # Create raster with census grid population masked to 
-    # only be with values for artificial surface CORINE categories
-    # (use max value if overlapping polygons within cell):
-    census_raster_111_count_draft <- terra::rasterize(census_vect, 
-                                                      cor_111, 
-                                                      field = "cell_111_count", 
-                                                      fun = "max") |> terra::mask(cor_111) # max value if overlaps
-    
-    census_raster_111 <- census_raster_111_draft / census_raster_111_count_draft
-    
-    # Reattach factor levels
-    levels(cor_111) <- clc_legend[, c("CODE_18","LABEL")]
-    
-    # Average population per 100x100 m per CORINE urban category:
-    avg_111 <- terra::zonal(census_raster_111, #_correctedF1, 
-                            cor_111, #cor_country_maskedF1, 
-                            fun = "mean",  
-                            na.rm = TRUE) # ignore NA values
+
+    avg_111 <- tryCatch({
+
+      # Create raster with census grid population masked to
+      # only be with values for artificial surface CORINE categories
+      # (use max value if overlapping polygons within cell):
+      census_raster_111_draft <- terra::rasterize(census_vect,
+                                                  cor_111,
+                                                  field = census_grid_value_col,
+                                                  fun = "max") |> terra::mask(cor_111) # max value if overlaps
+
+      # count number of cor_111 cells per polygon (feature)
+      counts_111 <- terra::extract(
+        cor_111,
+        census_vect,
+        fun = function(x, ...) sum(!is.na(x)),
+        df = TRUE
+      )
+      census_vect$cell_111_count <- counts_111[,2]
+
+      # Create raster with census grid population masked to
+      # only be with values for artificial surface CORINE categories
+      # (use max value if overlapping polygons within cell):
+      census_raster_111_count_draft <- terra::rasterize(census_vect,
+                                                        cor_111,
+                                                        field = "cell_111_count",
+                                                        fun = "max") |> terra::mask(cor_111) # max value if overlaps
+
+      census_raster_111 <- census_raster_111_draft / census_raster_111_count_draft
+
+      # Reattach factor levels
+      levels(cor_111) <- clc_legend[, c("CODE_18","LABEL")]
+
+      # Average population per 100x100 m per CORINE urban category:
+      terra::zonal(census_raster_111, #_correctedF1,
+                  cor_111, #cor_country_maskedF1,
+                  fun = "mean",
+                  na.rm = TRUE) # ignore NA values
+
+    }, error = function(e) {
+      message(sprintf(
+        "Note: no census population data overlaps CORINE class 111 in this catchment; skipping this class (%s).",
+        conditionMessage(e)
+      ))
+      NULL
+    })
   }
   
   # SECOND: TREAT CATEGORY 111 CONTINUOUS URBAN
@@ -98,43 +147,55 @@ calculate_weighting <- function(census_grid_geom,
   # mask out census
   census_masked_111 <- census_vect[!census_vect$GRD_ID %in% used_ids_111, ]
   
-  if (terra::global(!is.na(cor_112), "sum", na.rm = TRUE)[1,1] > 0) {
-    
-    # Create raster with census grid population masked to 
-    # only be with values for artificial surface CORINE categories
-    # (use max value if overlapping polygons within cell):
-    census_raster_112_draft <- terra::rasterize(census_masked_111, 
-                                                cor_112, 
-                                                field = census_grid_value_col, 
-                                                fun = "max") |> terra::mask(cor_112) # max value if overlaps
-    
-    # count number of cor_112 cells per polygon (feature)
-    counts_112 <- terra::extract(
-      cor_112,
-      census_masked_111,
-      fun = function(x, ...) sum(!is.na(x)),
-      df = TRUE
-    )
-    census_masked_111$cell_112_count <- counts_112[,2]
-    
-    # Create raster with census grid population masked to 
-    # only be with values for artificial surface CORINE categories
-    # (use max value if overlapping polygons within cell):
-    census_raster_112_count_draft <- terra::rasterize(census_masked_111, 
-                                                      cor_112, 
-                                                      field = "cell_112_count", 
-                                                      fun = "max") |> terra::mask(cor_112) # max value if overlaps
-    
-    census_raster_112 <- census_raster_112_draft / census_raster_112_count_draft
-    
-    # Reattach factor levels
-    levels(cor_112) <- clc_legend[, c(cor_code_raster_columnname, cor_name_raster_columnname)]
+  avg_112 <- NULL
 
-    # Average population per 100x100 m per CORINE urban category:
-    avg_112 <- terra::zonal(census_raster_112, #_correctedF1, 
-                            cor_112, #cor_country_maskedF1, 
-                            fun = "mean",  
-                            na.rm = TRUE) # ignore NA values
+  if (terra::global(!is.na(cor_112), "sum", na.rm = TRUE)[1,1] > 0) {
+
+    avg_112 <- tryCatch({
+
+      # Create raster with census grid population masked to
+      # only be with values for artificial surface CORINE categories
+      # (use max value if overlapping polygons within cell):
+      census_raster_112_draft <- terra::rasterize(census_masked_111,
+                                                  cor_112,
+                                                  field = census_grid_value_col,
+                                                  fun = "max") |> terra::mask(cor_112) # max value if overlaps
+
+      # count number of cor_112 cells per polygon (feature)
+      counts_112 <- terra::extract(
+        cor_112,
+        census_masked_111,
+        fun = function(x, ...) sum(!is.na(x)),
+        df = TRUE
+      )
+      census_masked_111$cell_112_count <- counts_112[,2]
+
+      # Create raster with census grid population masked to
+      # only be with values for artificial surface CORINE categories
+      # (use max value if overlapping polygons within cell):
+      census_raster_112_count_draft <- terra::rasterize(census_masked_111,
+                                                        cor_112,
+                                                        field = "cell_112_count",
+                                                        fun = "max") |> terra::mask(cor_112) # max value if overlaps
+
+      census_raster_112 <- census_raster_112_draft / census_raster_112_count_draft
+
+      # Reattach factor levels
+      levels(cor_112) <- clc_legend[, c(cor_code_raster_columnname, cor_name_raster_columnname)]
+
+      # Average population per 100x100 m per CORINE urban category:
+      terra::zonal(census_raster_112, #_correctedF1,
+                  cor_112, #cor_country_maskedF1,
+                  fun = "mean",
+                  na.rm = TRUE) # ignore NA values
+
+    }, error = function(e) {
+      message(sprintf(
+        "Note: no census population data overlaps CORINE class 112 in this catchment; skipping this class (%s).",
+        conditionMessage(e)
+      ))
+      NULL
+    })
   }
   
   # extract raster values over polygons
@@ -148,6 +209,8 @@ calculate_weighting <- function(census_grid_geom,
   
   # THIRD: TREAT OTHER CATEGORIES (optional)
   # Only run when the caller opted in via additional_candidate_classes_to_consider
+  avg_other <- NULL
+
   if (!is.na(additional_candidate_classes_to_consider)) {
 
     if (additional_candidate_classes_to_consider == "all_artificial_surface_classes") {
@@ -186,49 +249,68 @@ calculate_weighting <- function(census_grid_geom,
       )
     }
 
-    # Create raster with census grid population masked to
-    # only be with values for artificial surface CORINE categories
-    # (use max value if overlapping polygons within cell):
-    census_raster_other_draft <- terra::rasterize(census_masked_112_111,
-                                                  cor_other_artificial,
-                                                  field = census_grid_value_col,
-                                                  fun = "max") |> terra::mask(cor_other_artificial) # max value if overlaps
+    # Only proceed if this catchment actually has cells in these classes —
+    # otherwise zonal() has nothing to aggregate and errors out.
+    if (terra::global(!is.na(cor_other_artificial), "sum", na.rm = TRUE)[1,1] > 0) {
 
-    # count number of cor_112 cells per polygon (feature)
-    counts_other <- terra::extract(
-      cor_other_artificial,
-      census_masked_112_111,
-      fun = function(x, ...) sum(!is.na(x)),
-      df = TRUE
-    )
-    census_masked_112_111$cell_other_count <- counts_other[,2]
+      avg_other <- tryCatch({
 
-    # Create raster with census grid population masked to
-    # only be with values for artificial surface CORINE categories
-    # (use max value if overlapping polygons within cell):
-    census_raster_other_count_draft <- terra::rasterize(census_masked_112_111,
-                                                        cor_other_artificial,
-                                                        field = "cell_other_count",
-                                                        fun = "max") |> terra::mask(cor_other_artificial) # max value if overlaps
+        # Create raster with census grid population masked to
+        # only be with values for artificial surface CORINE categories
+        # (use max value if overlapping polygons within cell):
+        census_raster_other_draft <- terra::rasterize(census_masked_112_111,
+                                                      cor_other_artificial,
+                                                      field = census_grid_value_col,
+                                                      fun = "max") |> terra::mask(cor_other_artificial) # max value if overlaps
 
-    census_raster_other <- census_raster_other_draft / census_raster_other_count_draft
+        # count number of cor_112 cells per polygon (feature)
+        counts_other <- terra::extract(
+          cor_other_artificial,
+          census_masked_112_111,
+          fun = function(x, ...) sum(!is.na(x)),
+          df = TRUE
+        )
+        census_masked_112_111$cell_other_count <- counts_other[,2]
 
-    # Reattach factor levels
-    levels(cor_other_artificial) <- clc_legend[, c(cor_code_raster_columnname, cor_name_raster_columnname)]
+        # Create raster with census grid population masked to
+        # only be with values for artificial surface CORINE categories
+        # (use max value if overlapping polygons within cell):
+        census_raster_other_count_draft <- terra::rasterize(census_masked_112_111,
+                                                            cor_other_artificial,
+                                                            field = "cell_other_count",
+                                                            fun = "max") |> terra::mask(cor_other_artificial) # max value if overlaps
 
-    # Average population per 100x100 m per CORINE urban category:
-    avg_other <- terra::zonal(census_raster_other, #_correctedF1,
-                              cor_other_artificial, #cor_country_maskedF1,
-                              fun = "mean",
-                              na.rm = TRUE) # ignore NA values
+        census_raster_other <- census_raster_other_draft / census_raster_other_count_draft
+
+        # Reattach factor levels
+        levels(cor_other_artificial) <- clc_legend[, c(cor_code_raster_columnname, cor_name_raster_columnname)]
+
+        # Average population per 100x100 m per CORINE urban category:
+        terra::zonal(census_raster_other, #_correctedF1,
+                    cor_other_artificial, #cor_country_maskedF1,
+                    fun = "mean",
+                    na.rm = TRUE) # ignore NA values
+
+      }, error = function(e) {
+        message(sprintf(
+          "Note: no census population data overlaps the additional candidate classes (%s) in this catchment; skipping this step (%s).",
+          additional_candidate_classes_to_consider, conditionMessage(e)
+        ))
+        NULL
+      })
+    }
   }
 
-  # Combine whichever of avg_111 / avg_112 / avg_other were computed
-  avg_tables <- Filter(Negate(is.null), list(
-    if (exists("avg_111")) avg_111,
-    if (exists("avg_112")) avg_112,
-    if (exists("avg_other")) avg_other
-  ))
+  # Combine whichever of avg_111 / avg_112 / avg_other were successfully computed
+  avg_tables <- Filter(Negate(is.null), list(avg_111, avg_112, avg_other))
+
+  if (length(avg_tables) == 0) {
+    stop(
+      "No CORINE classes in this catchment had any overlapping census population data; cannot calculate weights.",
+      call. = FALSE
+    )
+  }
+
   avg_pop_per_corineF1 <- do.call(rbind, avg_tables)
 
   avg_pop_per_corineF1 <- avg_pop_per_corineF1[!is.na(avg_pop_per_corineF1[[census_grid_value_col]]), ]
