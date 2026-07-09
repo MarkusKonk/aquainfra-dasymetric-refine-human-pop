@@ -194,7 +194,7 @@ docker run -it --rm -v ./out:/out -e R_SCRIPT=keep_only_valid_corineCLCclasses.R
 ### Step 9A: Dasymetric Refinement (Weighted, 2021) using buildings
 
 ```bash
-docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2021_catchment.rds" "/out/2021.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "/out/buildings.rds" "5" "/out/refinement_weighted_2021.tif" "/out/lau_cell_counts_weighted2021.rds" "/out/corine2018_final.rds" 
+docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2021_catchment.rds" "/out/2021.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "/out/buildings.rds" "5" "/out/refinement_weighted_2021.rds" "/out/refinement_weighted_2021.tif" "/out/lau_cell_counts_weighted2021.rds" "/out/corine2018_final.rds" 
 ```
 
 ---
@@ -202,7 +202,7 @@ docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbo
 ### OR Step 9A: Dasymetric Refinement (Weighted, 2021) without buildings
 
 ```bash
-docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2021_catchment.rds" "/out/2021.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "NA" "NA" "/out/refinement_weighted_2021.tif" "/out/lau_cell_counts_weighted2021.rds" "/out/corine2018_final.rds" 
+docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2021_catchment.rds" "/out/2021.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "NA" "NA" "/out/refinement_weighted_2021.rds" "/out/refinement_weighted_2021.tif" "/out/lau_cell_counts_weighted2021.rds" "/out/corine2018_final.rds" 
 ```
 
 ---
@@ -210,7 +210,7 @@ docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbo
 ### Step 9B: Dasymetric Refinement (Weighted, 2018) using buildings
 
 ```bash
-docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2018_catchment.rds" "/out/2018.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "/out/refinement_weighted_2018.rds" "/out/buildings.rds" "5" "/out/refinement_weighted_2018.tif" "/out/lau_cell_counts_weighted2018.rds" "/out/corine2018_extra1.rds" 
+docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2018_catchment.rds" "/out/2018.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "/out/buildings.rds" "5" "/out/refinement_weighted_2018.rds" "/out/refinement_weighted_2018.tif" "/out/lau_cell_counts_weighted2018.rds" "/out/corine2018_extra1.rds" 
 ```
 
 ---
@@ -218,7 +218,7 @@ docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbo
 ### OR Step 9B: Dasymetric Refinement (Weighted, 2018) without buildings
 
 ```bash
-docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2018_catchment.rds" "/out/2018.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "/out/refinement_weighted_2018.rds" "NA" "NA" "/out/refinement_weighted_2018.tif" "/out/lau_cell_counts_weighted2018.rds" "/out/corine2018_extra1.rds" 
+docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "weighted" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2018_catchment.rds" "/out/2018.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "NA" "NA" "/out/refinement_weighted_2018.rds" "/out/refinement_weighted_2018.tif" "/out/lau_cell_counts_weighted2018.rds" "/out/corine2018_extra1.rds" 
 ```
 
 ---
