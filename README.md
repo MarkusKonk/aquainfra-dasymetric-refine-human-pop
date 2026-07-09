@@ -25,8 +25,7 @@ Replace `<your-username>` with your GitHub username after pushing this repositor
 | **EUBUCCO buildings** | Harmonised European building dataset (only residential buildings are used) | https://eubucco.com/files/v0.2 |
 | **CORINE Raster** | CORINE Land Cover raster  2018/2006/2000| https://aquainfra-syke.a3s.fi/europe_clc_cog_raster/CLC2018ACC_V2018_20_cog.tif or https://aquainfra-syke.a3s.fi/europe_clc_cog_raster/CLC2006ACC_V2018_20_cog.tif or https://aquainfra-syke.a3s.fi/europe_clc_cog_raster/CLC2000ACC_V2018_20_cog.tif |
 | **ECRINS Subbasins** | ECRINS subbasin geometries | https://water.discomap.eea.europa.eu/arcgis/rest/services/Ecrins/ECRINS_FunctionalElementaryCatchments/MapServer/0/query |
-| **HydroSHEDS Hydrobasins** | HydroSHED Hydrobasins | 
-https//rsis.ramsar.org/geoserver/ows?service=WFS&version=2.0.0&request=GetCapabilities which is Level 7 hydrobasins from https://www.hydrosheds.org/products/hydrobasins | 
+| **HydroSHEDS Hydrobasins** | HydroSHED Hydrobasins | https//rsis.ramsar.org/geoserver/ows?service=WFS&version=2.0.0&request=GetCapabilities which is Level 7 hydrobasins from https://www.hydrosheds.org/products/hydrobasins | 
 
 ---
 
