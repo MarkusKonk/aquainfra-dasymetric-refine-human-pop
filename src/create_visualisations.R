@@ -722,7 +722,7 @@ save_map_pop_estimated <- function(est_pop_raster,
     leaflet::addRasterImage(
       est_pop_ll,
       colors = pal,
-      opacity = 0.8,
+      opacity = 1,
       project = FALSE
     )
     
