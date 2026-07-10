@@ -239,14 +239,6 @@ docker run -it --rm -v ./out:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbo
 
 ---
 
-### Step 9D: Crop and Mask Raster (Valid CORINE CLC x Catchment)
-
-```bash
-docker run -it --rm -v ./out:/out -e R_SCRIPT=crop_and_mask_raster.R d2k-toolbox "/out/corine2018_valid.rds" "/out/catchment.gpkg" "/out/corine2018_valid_cropped.rds"
-```
-
----
-
 ### Step 10: Evaluate Refinement
 
 ```bash

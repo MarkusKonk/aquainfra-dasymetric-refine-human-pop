@@ -80,10 +80,6 @@ docker run -it --rm -v $OUT_DIR:/out -e R_SCRIPT=dasymetric_refinement.R d2k-too
 echo "--- Step 9C: Dasymetric Refinement (Simple, 2021) ---"
 docker run -it --rm -v $OUT_DIR:/out -e R_SCRIPT=dasymetric_refinement.R d2k-toolbox "simple" "/out/corine2018_valid.rds" "/out/coryear2018.rds" "/out/lau_2021_catchment.rds" "/out/2021.rds" "/out/catchment.gpkg" "/out/weight_table_final.rds" "/out/buildings.rds" "5" "/out/refinement_simple_2021.rds" "/out/refinement_simple_2021.tif" "/out/lau_cell_counts_simple2021.rds" "/out/corine2018_extra2.rds"
 
-# Step 9D: Crop and Mask Raster (Valid CORINE CLC x Catchment)
-echo "--- Step 9D: Crop and Mask Raster (Valid CORINE CLC x Catchment) ---"
-docker run -it --rm -v $OUT_DIR:/out -e R_SCRIPT=crop_and_mask_raster.R d2k-toolbox "/out/corine2018_valid.rds" "/out/catchment.gpkg" "/out/corine2018_valid_cropped.rds"
-
 # Step 10: Evaluate Refinement
 echo "--- Step 10: Evaluate Refinement ---"
 docker run -it --rm -v $OUT_DIR:/out -e R_SCRIPT=evaluate_refinement.R d2k-toolbox "/out/refinement_weighted_2021.rds" "/out/refinement_simple_2021.rds" "/out/censusgrid_catchment.rds" "/out/corine2018_cropped.rds" "/out/evaluate_weighted_2021.rds" "/out/evaluate_simple_2021.rds" "/out/corineCLC2018overlappingPositivePop2021.rds" "/out/metrics_weighted.rds" "/out/metrics_simple.rds"
