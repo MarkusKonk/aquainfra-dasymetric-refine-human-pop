@@ -31,7 +31,13 @@ RUN conda install -n base -c conda-forge mamba -y
 RUN mamba env update -n base -f /app/environment.yml -y && \
     mamba clean --all -f -y
 
-# 7. (FIX) Install the latest 'eurostat' from CRAN
+# 7a. (FIX) Install libgomp1, the OpenMP runtime R needs at runtime
+# The miniconda3 base image is a slim Debian image and does not ship this by default,
+# causing 'libgomp.so.1: cannot open shared object file' when R starts.
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && \
+    rm -rf /var/lib/apt/lists/*
+
+# 7b. (FIX) Install the latest 'eurostat' from CRAN
 # This bypasses the conda-forge version issue and fixes the '410 Gone' API error.
 RUN /opt/conda/bin/R -e "install.packages('eurostat', repos='https://cloud.r-project.org/', dependencies=TRUE)"
 
