@@ -679,58 +679,72 @@ save_map_pop_estimated <- function(est_pop_raster,
     is.finite(observed_values) &
       observed_values > 0
   ]
-    
-  if (length(observed_values) < 2) {
-    warning("Insufficient variation in raster values.")
-    return(invisible(NULL))
-  }
-  
-  # Create classes
-  # Suppressed: classInt warns even when n legitimately equals the number of
-  # unique values (small catchments can have very few distinct population
-  # values), which just means each value becomes its own class — expected,
-  # not an error.
-  class_intervals <- suppressWarnings(classInt::classIntervals(
-    observed_values,
-    n = min(8, length(unique(observed_values))),
-    style = "quantile"
-  ))
 
-  breaks_clean <- sort(unique(class_intervals$brks))
-
-  if (length(breaks_clean) < 2) {
-    warning("Could not create class breaks.")
+  if (length(observed_values) == 0) {
+    warning("No populated cells to map.")
     return(invisible(NULL))
   }
 
-  # Extend the top break to Inf — reprojecting the raster for display
-  # (terra::project() below) can nudge the true maximum a hair above its
-  # original value via float32 drift in GDAL's warp, which would otherwise
-  # push those cells outside the color scale and render them as NA/transparent.
-  # The true max is kept only for the legend label, so it still reads e.g.
-  # "6.8 - 16.6" instead of "6.8 - Inf".
-  true_max <- max(breaks_clean)
-  breaks_clean[length(breaks_clean)] <- Inf
+  unique_vals <- unique(observed_values)
+  single_value_case <- length(unique_vals) < 2
 
-  n_classes <- length(breaks_clean) - 1
-  
-  final_colors <- RColorBrewer::brewer.pal(
-    max(3, min(9, n_classes)),
-    "YlOrRd"
-  )
-    
+  if (single_value_case) {
+    # Degenerate but legitimate case (e.g. tiny catchments with very few
+    # populated cells that all happen to carry the same estimate) - render
+    # a solid-color map with a single-entry legend instead of skipping.
+    message(sprintf(
+      "Only one distinct population value (%.1f) among populated cells - using a solid-color map.",
+      unique_vals[1]
+    ))
+    single_color <- RColorBrewer::brewer.pal(3, "YlOrRd")[2]
+  } else {
+    # Create classes
+    # Suppressed: classInt warns even when n legitimately equals the number of
+    # unique values (small catchments can have very few distinct population
+    # values), which just means each value becomes its own class — expected,
+    # not an error.
+    class_intervals <- suppressWarnings(classInt::classIntervals(
+      observed_values,
+      n = min(8, length(unique_vals)),
+      style = "quantile"
+    ))
+
+    breaks_clean <- sort(unique(class_intervals$brks))
+
+    if (length(breaks_clean) < 2) {
+      warning("Could not create class breaks.")
+      return(invisible(NULL))
+    }
+
+    # Extend the top break to Inf — reprojecting the raster for display
+    # (terra::project() below) can nudge the true maximum a hair above its
+    # original value via float32 drift in GDAL's warp, which would otherwise
+    # push those cells outside the color scale and render them as NA/transparent.
+    # The true max is kept only for the legend label, so it still reads e.g.
+    # "6.8 - 16.6" instead of "6.8 - Inf".
+    true_max <- max(breaks_clean)
+    breaks_clean[length(breaks_clean)] <- Inf
+
+    n_classes <- length(breaks_clean) - 1
+
+    final_colors <- RColorBrewer::brewer.pal(
+      max(3, min(9, n_classes)),
+      "YlOrRd"
+    )
+  }
+
   # Number of populated cells
   numb_of_100m2_cells <- sum(
     !is.na(terra::values(est_pop_raster))
   )
-  
+
   # Reproject only for display
   est_pop_ll <- terra::project(
     est_pop_raster,
     "EPSG:4326",
     method = "near"
   )
-    
+
   catchment_ll <- NULL
   if (!is.null(catchment)) {
     catchment_ll <- sf::st_transform(
@@ -738,14 +752,27 @@ save_map_pop_estimated <- function(est_pop_raster,
       4326
     )
   }
-    
+
   # Leaflet palette
-  pal <- leaflet::colorBin(
-    palette = final_colors,
-    domain = observed_values,
-    bins = breaks_clean,
-    na.color = "transparent"
-  )
+  if (single_value_case) {
+    # colorBin with one bin spanning the full range, not colorFactor's exact
+    # value match - terra::project() below (even with method="near") can
+    # nudge cell values by a hair via float32 drift in GDAL's warp, which
+    # would make an exact-match domain silently drop populated cells to NA.
+    pal <- leaflet::colorBin(
+      palette = single_color,
+      domain = unique_vals,
+      bins = c(-Inf, Inf),
+      na.color = "transparent"
+    )
+  } else {
+    pal <- leaflet::colorBin(
+      palette = final_colors,
+      domain = observed_values,
+      bins = breaks_clean,
+      na.color = "transparent"
+    )
+  }
     
   # Build map
   map_widget <- leaflet::leaflet() |>
@@ -771,19 +798,30 @@ save_map_pop_estimated <- function(est_pop_raster,
   }
     
   # Legend
-  map_widget <- map_widget |>
-    leaflet::addLegend(
-      pal = pal,
-      values = observed_values,
-      title = "People / 100 m²",
-      opacity = 1,
-      position = "bottomright",
-      labFormat = function(type, cuts, p) {
-        cuts[is.infinite(cuts)] <- true_max
-        paste(round(cuts[-length(cuts)], 1), round(cuts[-1], 1), sep = " - ")
-      }
-    )
-    
+  if (single_value_case) {
+    map_widget <- map_widget |>
+      leaflet::addLegend(
+        colors = single_color,
+        labels = paste0(round(unique_vals, 1), " (uniform)"),
+        title = "People / 100 m²",
+        opacity = 1,
+        position = "bottomright"
+      )
+  } else {
+    map_widget <- map_widget |>
+      leaflet::addLegend(
+        pal = pal,
+        values = observed_values,
+        title = "People / 100 m²",
+        opacity = 1,
+        position = "bottomright",
+        labFormat = function(type, cuts, p) {
+          cuts[is.infinite(cuts)] <- true_max
+          paste(round(cuts[-length(cuts)], 1), round(cuts[-1], 1), sep = " - ")
+        }
+      )
+  }
+
   # Title
   map_widget <- map_widget |>
     leaflet::addControl(
@@ -796,7 +834,7 @@ save_map_pop_estimated <- function(est_pop_raster,
       ),
       position = "topleft"
     )
-    
+
   # Save HTML
   htmlwidgets::saveWidget(
     widget = map_widget,
