@@ -1,0 +1,56 @@
+{
+  "version": "0.1.0",
+  "id": "get-hydro90m-catchment-by-id-gisco",
+  "use_case": "Human Population",
+  "title": {
+    "en": "Get Hydrography90m basin catchment by ID (live GISCO country lookup)"
+  },
+  "description": {
+    "en": "Queries the aqua.igb-berlin.de pygeoapi 'get-basin-polygon' process (Hydrography90m / GeoFRESH) for a single drainage basin by basin_id, fixes invalid geometries, reprojects to EPSG:3035, and determines the list of countries that catchment overlaps by intersecting it live against GISCO (Eurostat) country boundaries (R function 'get_specific_catchment') - no precomputed catchment-to-country mapping is used, unlike get-ecrins-catchment and get-hydrobasins-l7-catchment. basin_id is not restricted to a fixed range; any valid Hydrography90m basin_id can be requested."
+  },
+  "jobControlOptions": ["sync-execute", "async-execute"],
+  "keywords": ["human population use case", "AquaINFRA", "Hydrography90m", "GeoFRESH", "catchment", "river basin", "GISCO", "basin_id"],
+  "links": [{
+    "type": "text/html",
+    "rel": "about",
+    "title": "information",
+    "href": "https://example.org/process",
+    "hreflang": "en-US"
+  }],
+  "inputs": {
+    "basin_id": {
+      "title": "Basin ID",
+      "description": "The Hydrography90m basin_id to retrieve (e.g. 1288419). Must be a positive integer; existence is validated live against the pygeoapi service, not against a fixed list.",
+      "schema": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minOccurs": 1,
+      "maxOccurs": 1,
+      "keywords": []
+    }
+  },
+  "outputs": {
+    "catchment": {
+      "title": "Catchment geometry",
+      "description": "The retrieved Hydrography90m basin boundary (MULTIPOLYGON), reprojected to EPSG:3035, saved as a GeoPackage.",
+      "schema": {
+        "type": "object",
+        "contentMediaType": "application/geopackage+sqlite3"
+      }
+    },
+    "countries": {
+      "title": "Countries for catchment",
+      "description": "The list of country codes that the requested catchment overlaps, determined live by intersecting the catchment geometry against GISCO (Eurostat) country boundaries.",
+      "schema": {
+        "type": "object",
+        "contentMediaType": "application/x-rds"
+      }
+    }
+  },
+  "example": {
+    "inputs": {
+      "basin_id": "1288419"
+    }
+  }
+}
