@@ -26,7 +26,8 @@ get_eubucco_buildings <- function(catchment,
   
   catchment_3035 <- sf::st_transform(catchment, 3035)
   catchment_union <- sf::st_union(catchment_3035)
-  
+  catchment_bbox <- sf::st_bbox(catchment_union)
+
   # Find overlapping NUTS2 regions (EUBUCCO v0.2 is partitioned by NUTS2)
   message("Fetching NUTS2 boundaries to find overlapping regions...")
   nuts2 <- giscoR::gisco_get_nuts(year = "2016", 
@@ -36,10 +37,13 @@ get_eubucco_buildings <- function(catchment,
                                   nuts_level = "2")
   
   overlapping <- nuts2[sf::st_intersects(nuts2, catchment_union, sparse = FALSE)[, 1], ]
-  
+
   if (nrow(overlapping) == 0) {
-    warning("No NUTS2 regions found overlapping this catchment.")
-    return(NULL)
+    # Fatal, not a warning: a silent NULL here is indistinguishable downstream
+    # from "legitimately no buildings" - e.g. a transient giscoR/GISCO NUTS
+    # fetch hiccup would otherwise save a useless NULL and exit 0, with no
+    # visible failure anywhere in the pipeline.
+    stop("No NUTS2 regions found overlapping this catchment.", call. = FALSE)
   }
   
   nuts2_ids <- overlapping$NUTS_ID
@@ -76,19 +80,39 @@ get_eubucco_buildings <- function(catchment,
                             nuts_id, nuts_id)
     
     tryCatch({
-      
+
+      # Push the catchment's bbox down to the parquet read via its "bbox"
+      # struct column, instead of arrow::read_parquet()'ing the whole NUTS2
+      # region — a single region can hold millions of buildings (e.g. DE94
+      # needs ~5.7GB of R memory read whole, vs. ~70MB filtered), which was
+      # silently OOM-killing this step in memory-constrained containers with
+      # no visible R error at all.
+      # NOTE: open_dataset() needs the plain path string + filesystem = s3
+      # separately - passing s3$path(parquet_path) as the source (as if it
+      # were a directory) fails with "Not a regular file".
+      read_filtered <- function(path) {
+        arrow::open_dataset(path, filesystem = s3, format = "parquet") |>
+          dplyr::filter(
+            bbox$xmin <= !!catchment_bbox[["xmax"]],
+            bbox$xmax >= !!catchment_bbox[["xmin"]],
+            bbox$ymin <= !!catchment_bbox[["ymax"]],
+            bbox$ymax >= !!catchment_bbox[["ymin"]]
+          ) |>
+          dplyr::collect()
+      }
+
       if (!is.null(cache_dir)) {
         dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
         local_path <- file.path(cache_dir, sprintf("%s.parquet", nuts_id))
         if (!file.exists(local_path)) {
-          # Use s3 to copy to local cache
-          tbl <- arrow::read_parquet(s3$path(parquet_path))
+          # Cache only the filtered (small) subset, not the whole region
+          tbl <- read_filtered(parquet_path)
           arrow::write_parquet(tbl, local_path)
         } else {
           tbl <- arrow::read_parquet(local_path)
         }
       } else {
-        tbl <- arrow::read_parquet(s3$path(parquet_path))
+        tbl <- read_filtered(parquet_path)
       }
       
       # Apply filters on the arrow table (fast, before converting to sf)
