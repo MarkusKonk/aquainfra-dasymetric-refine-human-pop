@@ -1,12 +1,10 @@
 #!/usr/bin/env Rscript
 
 ################################################################################
-# MODULE: Get Specific Catchment by basin_id (Hydrography90m / GeoFRESH
-# pygeoapi API + GISCO countries).
-# Same input as get_hydro90m_catchment.R (a basin_id), but instead of looking
-# up countries from the precomputed basin_to_countries.rds, it determines
-# overlapping countries live by intersecting the fetched basin polygon
-# against GISCO country boundaries (giscoR) - no bundled lookup file needed.
+# MODULE: Get Specific Hydrography90m Catchment by basin_id using IGB's 
+# pygeoapi API. The script determines and stores overlapping countries by 
+# intersecting the fetched basin polygon against GISCO country boundaries 
+# using giscoR from Eurostat.
 ################################################################################
 
 # --- 1. DEPENDENCIES ---
